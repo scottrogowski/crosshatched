@@ -295,7 +295,7 @@ Mat draw_strokes_on_img(vector< vector<Point> > strokes, Mat img, Mat ret) {
 
 }
 
-Mat apply_fast_gradient(Mat img) {
+Mat apply_fast_gradient(Mat img, bool laplacian, bool equalize) {
     // We apply the algorithm in separate ways for the edges and for the rest of
     // the image. This gives us thicker edges that look more like a crosshatch
     // drawing
@@ -303,13 +303,15 @@ Mat apply_fast_gradient(Mat img) {
     Mat ret = img.zeros(img.rows, img.cols, CV_8UC1);
     ret.setTo(WHITE);
 
-    equalizeHist( img, img );
+    if (equalize)
+        equalizeHist(img, img);
+
     vector< vector<Point> > strokes = get_gradient_strokes(img, false);
     draw_strokes_on_img(strokes, img, ret);
 
-    Mat lap = get_canny(img);
-    vector< vector<Point> > lap_strokes = get_gradient_strokes(lap, true);
-    draw_strokes_on_img(lap_strokes, img, ret);
+    Mat edges = laplacian ? get_laplacian(img) : get_canny(img);
+    vector< vector<Point> > edge_strokes = get_gradient_strokes(edges, true);
+    draw_strokes_on_img(edge_strokes, img, ret);
 
     return ret;
 }
@@ -339,7 +341,7 @@ void make_debug_window() {
     createTrackbar( "CANNY_DIV", WINDOW_NAME, &CANNY_DIV, 10);
 }
 
-bool handle_video(VideoCapture cap, bool is_live) {
+bool handle_video(VideoCapture cap, bool laplacian, bool equalize, bool is_live) {
     if(!cap.isOpened())
         return -1;
 
@@ -370,7 +372,7 @@ bool handle_video(VideoCapture cap, bool is_live) {
             break;
 
         cvtColor(frame, bw, CV_BGR2GRAY);
-        grad = apply_fast_gradient(bw);
+        grad = apply_fast_gradient(bw, laplacian, equalize);
 
         if (is_live) {
             imshow(WINDOW_NAME, grad);
@@ -393,23 +395,23 @@ bool handle_video(VideoCapture cap, bool is_live) {
     return 0;
 }
 
-void loop_debug(Mat bw) {
+void loop_debug(Mat bw, bool laplacian, bool equalize) {
     resize(bw, bw, Size(700*bw.rows/bw.cols,700));
     make_debug_window();
     for(;;) {
-        Mat grad = apply_fast_gradient(bw);
+        Mat grad = apply_fast_gradient(bw, laplacian, equalize);
         imshow(WINDOW_NAME, grad);
         waitKey(1000);
     }
 }
 
-int handle_image(Mat bw) {
+int handle_image(Mat bw, bool laplacian, bool equalize) {
     cvtColor(bw, bw, CV_BGR2GRAY);
     #ifdef DEBUG
-    loop_debug(bw);
+    loop_debug(bw, laplacian, equalize);
     #endif
 
-    bw = apply_fast_gradient(bw);
+    bw = apply_fast_gradient(bw, laplacian, equalize);
     imwrite(OUT_IMAGE_FILENAME, bw);
     cout << "Wrote as " << OUT_IMAGE_FILENAME << endl;
     return 0;
@@ -418,21 +420,38 @@ int handle_image(Mat bw) {
 int main(int argc, char* argv[]) {
     srand (time(NULL));
 
-    // If passed an argument, that argument will be either a video or an image
-    if (argc > 1) {
-        string in_filename = argv[1];
+    bool laplacian = false;
+    bool equalize = false;
+    string in_filename = "";
+
+    // Loop over arguments
+    for (int i=1; i<argc; i++) {
+        string arg = string(argv[i]);
+        if (arg.compare("--laplacian") == 0) {
+            laplacian = true;
+            continue;
+        }
+        if (arg.compare("--equalize") == 0) {
+            equalize = true;
+            continue;
+        }
+        in_filename = arg;
+    }
+
+    // We can either process a video or an image
+    if (in_filename.length()) {
         if (endswith(in_filename, ".mp4")) {
             VideoCapture cap(in_filename);
-            return handle_video(cap, false);
+            return handle_video(cap, laplacian, equalize, false);
         }
         else {
             Mat bw = imread(in_filename, 1);
-            return handle_image(bw);
+            return handle_image(bw, laplacian, equalize);
         }
     }
 
-    // If we are not passed an argument, we are going to do this from the webcam
+    // If we are not passed a file, use the webcam
     VideoCapture cap(0);
-    return handle_video(cap, true);
+    return handle_video(cap, laplacian, equalize, true);
 }
 
