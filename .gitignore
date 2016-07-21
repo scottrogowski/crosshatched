@@ -1,0 +1,7 @@
+.DS_Store
+*.mp4
+*.m4a
+*.so
+*.png
+fast_gradient
+historical/*
