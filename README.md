@@ -1,7 +1,7 @@
 #### Create crosshatch-style drawings and videos.
 
-![Alt text](/examples/obama.png?raw=true =400x)
-![Alt text](/examples/goldengate.png?raw=true =400x)
+<img src='/examples/obama.png?raw=true' width='400px' style='display:inline-block;'>)
+<img src='/examples/goldengate.png?raw=true' width='400px' style='display:inline-block;'>)
 
 #### To use
 $ make
