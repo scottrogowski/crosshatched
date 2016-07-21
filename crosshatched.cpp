@@ -92,8 +92,10 @@ void show_and_wait(Mat img) {
 }
 
 Mat compute_gradient_mask(Mat img, bool is_edge) {
-    // returns an image of gradient angles.
-    // edges are finer than the gradient so constants are different
+    // Returns an image of gradient angles.
+    // Edges have smaller convolution kernels because they need to be more detailed
+    // Non-edges use integer rather than float matricies to reduce distracting swirling
+    // in the image and, as a side effect, speed up the program.
 
     int sobel_kernel_1;
     Size blur_size_1;
