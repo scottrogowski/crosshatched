@@ -2,6 +2,6 @@
 *.mp4
 *.m4a
 *.so
-*.png
+out\.*
 fast_gradient
 historical/*
