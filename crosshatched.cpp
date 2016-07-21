@@ -303,6 +303,7 @@ Mat apply_fast_gradient(Mat img) {
     Mat ret = img.zeros(img.rows, img.cols, CV_8UC1);
     ret.setTo(WHITE);
 
+    equalizeHist( img, img );
     vector< vector<Point> > strokes = get_gradient_strokes(img, false);
     draw_strokes_on_img(strokes, img, ret);
 
@@ -355,11 +356,14 @@ bool handle_video(VideoCapture cap, bool is_live) {
 
     #ifdef DEBUG
         make_debug_window();
+        is_live = true;
     #endif
 
     Mat frame, grad, color_frame, bw;
+
     queue<int> time_queue;
-    time_queue.push(time(0));
+    if (!is_live) time_queue.push(time(0));
+
     for (int i=0; true; i++) {
         cap >> frame;
         if (frame.empty())
@@ -375,14 +379,11 @@ bool handle_video(VideoCapture cap, bool is_live) {
         else {
             cvtColor(grad, color_frame, CV_GRAY2BGR); // mp4 requires a color frame
             outputVideo.write(color_frame);
-        }
 
-        time_queue.push(time(0));
-        if (time_queue.size() > 10) time_queue.pop();
-        float avg_time = ((float)(time_queue.back() - time_queue.front()))/time_queue.size();
-        int minutes_remaining = (int)round((num_frames-i)*avg_time/60.0);
-
-        if (!is_live) {
+            time_queue.push(time(0));
+            if (time_queue.size() > 10) time_queue.pop();
+            float avg_time = ((float)(time_queue.back() - time_queue.front()))/time_queue.size();
+            int minutes_remaining = (int)round((num_frames-i)*avg_time/60.0);
             cout << "frame " << i << "/" << num_frames << endl;
             cout << minutes_remaining << " minutes remaining" << endl << endl;
         }
