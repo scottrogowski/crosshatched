@@ -19,7 +19,6 @@ Opencv is the big requirement here and you will need to install that.
 using namespace std;
 using namespace cv;
 
-// #define DEBUG
 
 #define BLACK 0
 #define WHITE 255
@@ -27,6 +26,7 @@ using namespace cv;
 #define OUT_IMAGE_FILENAME "out.png"
 #define OUT_VIDEO_FILENAME "out.mp4"
 #define WINDOW_NAME "window"
+#define DEBUG_WINDOW_WIDTH 700
 
 int DENSITY = 5;
 int SOBEL_KERNEL = 3;
@@ -48,7 +48,11 @@ int WHITE_THRESHOLD = 200;
 int PERP_LESS_THRESHOLD = 50;
 
 
-
+struct Flags {
+    bool laplacian = false;
+    bool equalize = false;
+    bool debug = false;
+};
 
 int get_int(Mat img, Point p) {
     return img.at<uchar>(p.y, p.x);
@@ -295,7 +299,7 @@ Mat draw_strokes_on_img(vector< vector<Point> > strokes, Mat img, Mat ret) {
 
 }
 
-Mat apply_fast_gradient(Mat img, bool laplacian, bool equalize) {
+Mat apply_fast_gradient(Mat img, Flags f) {
     // We apply the algorithm in separate ways for the edges and for the rest of
     // the image. This gives us thicker edges that look more like a crosshatch
     // drawing
@@ -303,13 +307,13 @@ Mat apply_fast_gradient(Mat img, bool laplacian, bool equalize) {
     Mat ret = img.zeros(img.rows, img.cols, CV_8UC1);
     ret.setTo(WHITE);
 
-    if (equalize)
+    if (f.equalize)
         equalizeHist(img, img);
 
     vector< vector<Point> > strokes = get_gradient_strokes(img, false);
     draw_strokes_on_img(strokes, img, ret);
 
-    Mat edges = laplacian ? get_laplacian(img) : get_canny(img);
+    Mat edges = f.laplacian ? get_laplacian(img) : get_canny(img);
     vector< vector<Point> > edge_strokes = get_gradient_strokes(edges, true);
     draw_strokes_on_img(edge_strokes, img, ret);
 
@@ -341,7 +345,7 @@ void make_debug_window() {
     createTrackbar( "CANNY_DIV", WINDOW_NAME, &CANNY_DIV, 10);
 }
 
-bool handle_video(VideoCapture cap, bool laplacian, bool equalize, bool is_live) {
+bool handle_video(VideoCapture cap, Flags f, bool is_live) {
     if(!cap.isOpened())
         return -1;
 
@@ -356,23 +360,26 @@ bool handle_video(VideoCapture cap, bool laplacian, bool equalize, bool is_live)
         return -1;
     }
 
-    #ifdef DEBUG
+    if (f.debug) {
         make_debug_window();
         is_live = true;
-    #endif
+    }
 
     Mat frame, grad, color_frame, bw;
 
     queue<int> time_queue;
     if (!is_live) time_queue.push(time(0));
 
-    for (int i=0; true; i++) {
+    for (int i=0; i<num_frames; i++) {
         cap >> frame;
-        if (frame.empty())
-            break;
+        if (frame.empty()) {
+            cout << "frame empty" << i << endl;
+            continue;
+        }
+        resize(frame, frame, Size(DEBUG_WINDOW_WIDTH*frame.rows/frame.cols,DEBUG_WINDOW_WIDTH));
 
         cvtColor(frame, bw, CV_BGR2GRAY);
-        grad = apply_fast_gradient(bw, laplacian, equalize);
+        grad = apply_fast_gradient(bw, f);
 
         if (is_live) {
             imshow(WINDOW_NAME, grad);
@@ -387,7 +394,8 @@ bool handle_video(VideoCapture cap, bool laplacian, bool equalize, bool is_live)
             float avg_time = ((float)(time_queue.back() - time_queue.front()))/time_queue.size();
             int minutes_remaining = (int)round((num_frames-i)*avg_time/60.0);
             cout << "frame " << i << "/" << num_frames << endl;
-            cout << minutes_remaining << " minutes remaining" << endl << endl;
+            cout << minutes_remaining << " minutes remaining" << endl;
+            cout << endl;
         }
     }
     if (!is_live)
@@ -395,23 +403,22 @@ bool handle_video(VideoCapture cap, bool laplacian, bool equalize, bool is_live)
     return 0;
 }
 
-void loop_debug(Mat bw, bool laplacian, bool equalize) {
-    resize(bw, bw, Size(700*bw.rows/bw.cols,700));
+void loop_debug(Mat bw, Flags f) {
+    resize(bw, bw, Size(DEBUG_WINDOW_WIDTH*bw.rows/bw.cols,DEBUG_WINDOW_WIDTH));
     make_debug_window();
     for(;;) {
-        Mat grad = apply_fast_gradient(bw, laplacian, equalize);
+        Mat grad = apply_fast_gradient(bw, f);
         imshow(WINDOW_NAME, grad);
         waitKey(1000);
     }
 }
 
-int handle_image(Mat bw, bool laplacian, bool equalize) {
+int handle_image(Mat bw, Flags f) {
     cvtColor(bw, bw, CV_BGR2GRAY);
-    #ifdef DEBUG
-    loop_debug(bw, laplacian, equalize);
-    #endif
+    if (f.debug)
+        loop_debug(bw, f);
 
-    bw = apply_fast_gradient(bw, laplacian, equalize);
+    bw = apply_fast_gradient(bw, f);
     imwrite(OUT_IMAGE_FILENAME, bw);
     cout << "Wrote as " << OUT_IMAGE_FILENAME << endl;
     return 0;
@@ -420,19 +427,22 @@ int handle_image(Mat bw, bool laplacian, bool equalize) {
 int main(int argc, char* argv[]) {
     srand (time(NULL));
 
-    bool laplacian = false;
-    bool equalize = false;
     string in_filename = "";
+    Flags flags;
 
     // Loop over arguments
     for (int i=1; i<argc; i++) {
         string arg = string(argv[i]);
         if (arg.compare("--laplacian") == 0) {
-            laplacian = true;
+            flags.laplacian = true;
             continue;
         }
         if (arg.compare("--equalize") == 0) {
-            equalize = true;
+            flags.equalize = true;
+            continue;
+        }
+        if (arg.compare("--debug") == 0) {
+            flags.debug = true;
             continue;
         }
         in_filename = arg;
@@ -440,18 +450,19 @@ int main(int argc, char* argv[]) {
 
     // We can either process a video or an image
     if (in_filename.length()) {
-        if (endswith(in_filename, ".mp4")) {
-            VideoCapture cap(in_filename);
-            return handle_video(cap, laplacian, equalize, false);
+        if (endswith(in_filename, ".mpg") || endswith(in_filename, ".mp4") ||
+            endswith(in_filename, ".gif") || endswith(in_filename, ".mov")) {
+                VideoCapture cap(in_filename);
+                return handle_video(cap, flags, false);
         }
         else {
             Mat bw = imread(in_filename, 1);
-            return handle_image(bw, laplacian, equalize);
+            return handle_image(bw, flags);
         }
     }
 
     // If we are not passed a file, use the webcam
     VideoCapture cap(0);
-    return handle_video(cap, laplacian, equalize, true);
+    return handle_video(cap, flags, true);
 }
 
