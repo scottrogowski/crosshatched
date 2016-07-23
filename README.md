@@ -1,10 +1,9 @@
 #### Use OpenCV to create crosshatch-style drawings and videos.
 
-<img src='/examples/obama.png?raw=true' width='400px' style='display:inline-block;'>
-<img src='/examples/goldengate.png?raw=true' width='400px' style='display:inline-block;'>
-<img src='/examples/matrix.gif?raw=true' width='400px'  style='display:inline-block;'>
-
-<img src='/examples/emily.gif?raw=true' width='400px'  style='display:inline-block;'>
+<img src='/examples/obama.png?raw=true' width='390px' style='display:inline-block;'>
+<img src='/examples/goldengate.png?raw=true' width='390px' style='display:inline-block;'>
+<img src='/examples/matrix.gif?raw=true' width='390px' style='display:inline-block;'>
+<img src='/examples/emily.gif?raw=true' width='390px' style='display:inline-block;'>
 
 #### To use:
 ```
