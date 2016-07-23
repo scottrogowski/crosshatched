@@ -1,16 +1,18 @@
 #### Use OpenCV to create crosshatch-style drawings and videos.
 
-<img src='/examples/obama.png?raw=true' width='400px' style='display:inline-block;'>)
 <div style='display:inline-block;'>
-    <img src='/examples/goldengate.png?raw=true' width='400px' style='display:inline-block;'>)
-    <img src='/examples/matrix.gif?raw=true' width='400px' style='display:inline-block;'>)
+    <img src='/examples/goldengate.png?raw=true' width='400px' style='display:block;'>)
+    <img src='/examples/matrix.gif?raw=true' width='400px' style='display:block;'>)
 </div>
+<img src='/examples/obama.png?raw=true' width='400px' style='display:inline-block;'>)
 
 #### To use:
+```
 $ make
 $ ./crosshatched sources/goldengate.jpg
 $ ./crosshatched --laplacian sources/goldengate.jpg
 $ ./crosshatched path/to/a/video.mp4
+```
 
 This script is optimized for images and videos >= 1080 pixels wide. You can also
 get decent results out of smaller images by tweaking the constants although
