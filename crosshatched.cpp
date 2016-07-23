@@ -52,6 +52,7 @@ struct Flags {
     bool laplacian = false;
     bool equalize = false;
     bool debug = false;
+    bool invert = false;
 };
 
 int get_int(Mat img, Point p) {
@@ -191,7 +192,8 @@ vector< vector<Point> > get_gradient_strokes(Mat img, bool is_edge) {
 
     vector< vector<Point> > strokes;
     Point p0, p1, p2, dxdy, o_dxdy;
-    int line_density = is_edge ? DENSITY/2 : DENSITY+1;
+    int density = img.cols / 200;
+    int line_density = is_edge ? density/2 : density+1;
 
     Mat grad = compute_gradient_mask(img, is_edge);
 
@@ -219,7 +221,8 @@ vector< vector<Point> > get_gradient_strokes(Mat img, bool is_edge) {
             //     o_dxdy = gradient_vector(grad_val);
 
             p0 = Point(x, y);
-            int limit = is_edge ? EDGE_LIMIT : GRAD_LIMIT;
+            // int limit = is_edge ? 10-line : GRAD_LIMIT;
+            int limit = 10-line_density;
             for (int i=0; i<limit; i++) {
 
                 try {
@@ -307,6 +310,9 @@ Mat apply_fast_gradient(Mat img, Flags f) {
     Mat ret = img.zeros(img.rows, img.cols, CV_8UC1);
     ret.setTo(WHITE);
 
+    if (f.invert)
+        bitwise_not(img, img);
+
     if (f.equalize)
         equalizeHist(img, img);
 
@@ -332,7 +338,7 @@ bool endswith(string const &fullString, string const &ending) {
 void make_debug_window() {
     // if we want to change some constants
     namedWindow(WINDOW_NAME,1);
-    createTrackbar( "DENSITY", WINDOW_NAME, &DENSITY, 10);
+    // createTrackbar( "DENSITY", WINDOW_NAME, &DENSITY, 10);
     createTrackbar( "BLUR_SIZE", WINDOW_NAME, &BLUR_SIZE, 30);
     createTrackbar( "SOBEL_KERNEL", WINDOW_NAME, &SOBEL_KERNEL, 15);
     createTrackbar( "BLOCK_SIZE_THRESHOLD", WINDOW_NAME, &BLOCK_SIZE_THRESHOLD, 50);
@@ -376,9 +382,11 @@ bool handle_video(VideoCapture cap, Flags f, bool is_live) {
             cout << "frame empty" << i << endl;
             continue;
         }
-        resize(frame, frame, Size(DEBUG_WINDOW_WIDTH*frame.rows/frame.cols,DEBUG_WINDOW_WIDTH));
+        // resize(frame, frame, Size(DEBUG_WINDOW_WIDTH*frame.rows/frame.cols,DEBUG_WINDOW_WIDTH));
 
         cvtColor(frame, bw, CV_BGR2GRAY);
+
+
         grad = apply_fast_gradient(bw, f);
 
         if (is_live) {
@@ -443,6 +451,10 @@ int main(int argc, char* argv[]) {
         }
         if (arg.compare("--debug") == 0) {
             flags.debug = true;
+            continue;
+        }
+        if (arg.compare("--invert") == 0) {
+            flags.invert = true;
             continue;
         }
         in_filename = arg;

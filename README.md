@@ -1,7 +1,10 @@
 #### Use OpenCV to create crosshatch-style drawings and videos.
 
 <img src='/examples/obama.png?raw=true' width='400px' style='display:inline-block;'>)
-<img src='/examples/goldengate.png?raw=true' width='400px' style='display:inline-block;'>)
+<div style='display:inline-block;'>
+    <img src='/examples/goldengate.png?raw=true' width='400px' style='display:inline-block;'>)
+    <img src='/examples/matrix.gif?raw=true' width='400px' style='display:inline-block;'>)
+</div>
 
 #### To use:
 $ make
@@ -9,9 +12,9 @@ $ ./crosshatched sources/goldengate.jpg
 $ ./crosshatched --laplacian sources/goldengate.jpg
 $ ./crosshatched path/to/a/video.mp4
 
-This script is optimized for images and videos >= 1080 pixels wide. Smaller images
-can also be done by tweaking the constants. Lowering the density and the
-line_length in particular would get you most of the way to a good-looking drawing.
+This script is optimized for images and videos >= 1080 pixels wide. You can also
+get decent results out of smaller images by tweaking the constants although
+bigger seems to be better in most cases.
 
 #### The algorithm:
 - Calculate the gradient of the image
