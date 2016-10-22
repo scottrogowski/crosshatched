@@ -3,6 +3,11 @@
 *.m4a
 *.so
 *.mov
+/*.png
+a.out
 out\.*
 crosshatched
 historical/*
+www/*
+examples/ignore/*
+sources/ignore/*
